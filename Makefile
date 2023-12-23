@@ -19,8 +19,6 @@
 # maintained (system_tb.v)
 #
 
-FILES = ChipShell.v	timerflags.v SegmentDisplayer.v
-
 # Project setup
 CHIPTOP		= ChipShell
 MODTOP		= Module_Top
