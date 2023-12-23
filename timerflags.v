@@ -1,3 +1,4 @@
+//`timescale 1ns/1ns
 //-----------------------------------------------------
 // Design Name : timerflags
 // File Name   : timerflags.v
@@ -32,10 +33,12 @@ module timerflags
   //localparam FBITS = $clog2(INPUT_CLK_FREQ/1e6);
   localparam FBITS = 4;
 
-  reg               mstr_pulse;
+  
+  // ICE40 Initializes all to zeroes
+  reg               mstr_pulse =0;
   reg   [FBITS-1:0] mstrcnt = 0;
-  reg               uS_Pulse;
-  reg               mS_Pulse;
+  reg               uS_Pulse =0;
+  reg               mS_Pulse =0;
   reg   [9:0]       mSCount = 0;  
   reg               tenth_Pulse;
   reg   [6:0]       tenthCount = 0;  

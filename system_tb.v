@@ -1,5 +1,5 @@
 // Test fixture for: Tool Chain Validation
-`timescale 1ns/10ps
+`timescale 1ns/1ns
 
 module system_tb
   #(
@@ -65,8 +65,13 @@ module system_tb
    endtask
 
    // Instantiate free-running elements
+   // We are operating with whole integer numbers of nanoseconds, so do the clocking slightly unevenly.
+   // HALF PERIOD is 46.66667, so after 3 half period we would equal 125nS (integer)
+   // arrange half period toggling to match this.
    always begin : Reference_Clock
-      #HALF_CLK_PERIOD sysclk = ~sysclk;
+      #41 sysclk = ~sysclk;
+      #42 sysclk = ~sysclk;
+      #42 sysclk = ~sysclk;
    end
 
    // Simulation monitors and notifiers
@@ -80,7 +85,7 @@ module system_tb
    // =================================================================
    // Main Simulation event Sequence
    initial begin : Initial_TestBench_State
-      $dumpfile("ctest.vcd");
+      $dumpfile("waveforms.fst");
       $dumpvars(0,system_tb);
       MasterErrorFlag = 1'b0;
 
@@ -116,7 +121,7 @@ module system_tb
       SendDistance(1500);
       SendDistance(940);
 
-      #200000000; // let another couple of intervals pass just for good measure.
+      #400000000; // let another couple of intervals pass just for good measure.
 
       if(MasterErrorFlag) begin
 	      $display("\n!!!! There were errors during simulation !!!!!  Check Logs closely.\n");
@@ -127,26 +132,26 @@ module system_tb
       $finish;
    end
 
-   // Instantiate the full ICE40 chip
+   // Instantiate the full Test Model top-level module
 
-   ChipShell
-     #(
-         /*Parameters*/
-         .INPUT_CLK_FREQ	   (INPUT_CLK_FREQ)
-      )
+   Module_Top
       DUT
       (
-         // Outputs
-         .LEDR_N		(led_r),
-         .LEDG_N		(led_g),
-         .TX         (uart_tx),
-         .P1B1       (sonartrigger),
-         // Inputs
-         .P1B7       (sonarecho),
-         .BTN_N		(btn[0]),
-         .RX         (uart_rx),
-         .CLK			(sysclk)
+         .clock		   (sysclk),
+
+         .sonartrigger  (sonartrigger),
+         .sonarecho     (sonarecho),
+
+         .TX            (uart_tx),
+         .RX            (uart_rx),
+
+         .LED_R		   (led_r),
+         .LED_G		   (led_g),
+
+         .button        (btn[0])
+
       );
+
          
 endmodule
 

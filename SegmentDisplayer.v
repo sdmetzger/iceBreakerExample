@@ -1,3 +1,4 @@
+//`timescale 1ns/1ns
 //-----------------------------------------------------
 // Design Name : segdisplay
 // File Name   : SegmentDisplayer.v

@@ -1,3 +1,4 @@
+//`timescale 1ns/1ns
 //-----------------------------------------------------
 // Design Name : ChipShell
 // File Name   : Chipshell.v
@@ -41,7 +42,9 @@
 // Updates:
 //  11.18.23 - First working instance implemented. Starting with flashing the Seven Segment Displays
 //
-//
+//  12.02.23 - Functionality locked (and verified on physical HW) for demo purposes.  Do any 
+//              extensions/enhancements elsewhere so as to not pollute the simplicity of this model 
+//              since it is for demonstration purposes only.
 //
 module ChipShell
   #(
@@ -82,16 +85,19 @@ module ChipShell
   wire  sysclk;
   wire  reset_l;
 
-  wire  uClock;
-
   wire  uSPulse;
   wire  mSPulse;
   wire  tenthPulse;
+
+  wire  sonarecho;
+  wire  sonartrigger;
 
   wire [3:0]  LoSeg;
   wire [3:0]  HiSeg;
   wire [6:0]  seg_pins_n;
   wire        digit_sel;
+  wire        noreturn_l;
+  wire        pegged_l;
 
   // IO pin wiring
   assign    {P1A9, P1A8, P1A7, P1A4, P1A3, P1A2, P1A1} = seg_pins_n;
@@ -100,18 +106,25 @@ module ChipShell
   assign    P1B1 = sonartrigger;
   assign    sonarecho = P1B7;
 
+  // currently defined, but unassigned pins,   Define as outputs and drive to zero.
+  assign    {P1B2, P1B3, P1B4, P1B8, P1B9, P1B10}  = 0;
+
   // for this project we are using the native clock.
   // no global reset needed
-  assign sysclk = CLK;
-  assign locked = 1'b1;    // always locked since there is no PLL
-  assign resetl = 1'b1;
+  assign reset_l = locked & BTN_N;  // Only one when button is one, and locked, else reset.
 
-  // press either button for a reset.   button signals are active high when pressed
-  assign reset_l = locked;  // for implementation, we do not yet have buttons on the board
-
-  assign LEDR_N = ~mSPulse;     // Just turn on for now
-  assign LEDG_N = ~tenthPulse;  // Just turn on for now
+  assign LEDR_N = noreturn_l & reset_l;     // If sonar did not return an echo or resetting
+  assign LEDG_N = pegged_l;        // If return was > 1M away
   assign TX = RX;        // simply loop back.
+
+  // Instantiate PLL Block.   For this design it is just a passthru since we are not multiplying the clock.
+  PLL_block
+    plx
+      (
+        .clkin  (CLK),
+        .clkout (sysclk),
+        .locked (locked)
+      );
 
   // Instantiate master timer block to generate reference pulses
   timerflags
@@ -153,6 +166,8 @@ module ChipShell
         .tenthPulse     (tenthPulse),
         .sonarecho_raw  (sonarecho),
         //outputs
+        .noreturn_l     (noreturn_l),
+        .pegged_l       (pegged_l),
         .loDigit        (LoSeg),
         .hiDigit        (HiSeg),
         .sonartrigger   (sonartrigger)
@@ -160,6 +175,7 @@ module ChipShell
 
 endmodule
 
+//-------------------------------------------------------------------
 
 module sonarcontroller
   (
@@ -191,14 +207,21 @@ module sonarcontroller
 
   reg       countupdateflag = 0;
   reg       countcapflag = 0;
-  wire      in_mm;
+  wire      inc_mm;
   wire      inc_ones;
   wire      inc_tens;
 
+  // placeholders for now.   Don't forget genrate these error conditions.   Reset to low by ice40.
+  // Invert before sending out.
+  reg       noreturn = 1'b0;
+  reg       pegged = 1'b0;
+
   // IO Pins
-  assign sonartrigger = state[TRIGGERING];
-  assign loDigit = loReg;
-  assign hiDigit = hiReg;
+  assign  sonartrigger = state[TRIGGERING];
+  assign  loDigit = loReg;
+  assign  hiDigit = hiReg;
+  assign  noreturn_l = ~noreturn;
+  assign  pegged_l = ~pegged;
 
   // Enumerating the states
   localparam
